@@ -1,0 +1,27 @@
+services:
+  # Service de base de données
+  db_audit:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Application d'audit
+  app_auditeur:
+    build:
+      context: .
+      dockerfile: ./docker/auditeur.dockerfile
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db_audit
+    tty: true # Permet l'interaction avec le terminal
+
+volumes:
+  postgres_data:

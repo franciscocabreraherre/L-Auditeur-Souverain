@@ -1,0 +1,8 @@
+pandas
+great_expectations
+mistralai
+python-dotenv
+sqlalchemy
+psycopg2-binary
+requests
+tqdm
