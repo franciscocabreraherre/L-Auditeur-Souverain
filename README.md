@@ -1,13 +1,13 @@
 # Projet : L'Auditeur Souverain
 
-Ce projet implémente un pipeline de gouvernance de données end-to-end pour le secteur énergétique français. Il utilise l'IA souveraine Mistral et la bibliothèque Great Expectations pour garantir la conformité des données de production électrique aux exigences de l'EU AI Act.
+Ce projet implémente un pipeline de gouvernance de données end-to-end pour le secteur énergétique français. Il utilise l'IA souveraine **Mistral** et la bibliothèque **Great Expectations** pour garantir la conformité des données de production électrique aux exigences de l'**EU AI Act**.
 
 ## Fiche Technique : Données et Objectifs
 
 ### Source des Données
-* **Nom** : éCO2mix Régional (Temps Réel)
-* **Producteur** : RTE (Réseau de Transport d'Électricité)
-* **Portail** : ODRE (Open Data Réseaux Énergies)
+* **Nom** : éCO2mix Régional (*Temps Réel*)
+* **Producteur** : RTE (*Réseau de Transport d'Électricité*)
+* **Portail** : ODRE (*Open Data Réseaux Énergies*)
 * **Période cible** : Janvier 2025 - Décembre 2025
 * **Note** : Les données ne sont pas versionnées dans ce dépôt. Le script situé dans le répertoire `src/scraper` permet une ingestion automatisée et vérifiée.
 
