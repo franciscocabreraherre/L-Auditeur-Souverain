@@ -1,5 +1,10 @@
+# Copyright (C) 2026 Francisco CABRERA HERRE
+# This program is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU Affero General Public License as 
+# published by the Free Software Foundation, either version 3 of the 
+# License, or (at your option) any later version.
+
 import os
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.database.models import Base

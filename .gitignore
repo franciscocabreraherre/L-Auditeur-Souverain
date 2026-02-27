@@ -1,5 +1,18 @@
-.env
-data/*
-.venv/
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+debug_main.py
+
+# Données (Très lourd)
+data/eco2mix_2025.csv
+data/*
+
+# Environnement
+.env
 settings.json
+
+# IDE
+.vscode/

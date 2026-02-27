@@ -29,16 +29,77 @@ L'agent d'IA (Mistral) analyse le pipeline pour répondre aux exigences de l'Art
 
 ```text
 L-AUDITEUR-SOUVERAIN/
-├── data/           # Fichiers de données locaux (exclus du versioning)
-├── docker/         # Fichiers de configuration Docker
-├── notebooks/      # Analyses exploratoires
-├── src/            # Code source modulaire
-│   ├── app/        # Interface utilisateur
-│   ├── auditor/    # Logique d'IA et conformité
-│   ├── processor/  # Traitement et validation
-│   └── scraper/    # Ingestion des données
-├── .env            # Variables d'environnement (secrets, exclus du versioning)
-├── .gitignore      # Définition des fichiers à ignorer
-├── docker-compose.yml
-└── requirements
+├── data/                        # Sources de données et documentation RTE
+│   └── eco2mix_2025.csv         # Dataset principal (400k+ lignes)
+├── docker/                      # Fichiers de build Docker
+│   └── auditeur.dockerfile
+├── notebooks/                   # Études et exploration de données
+│   └── data_exploration.ipynb
+├── src/
+│   ├── auditor/                 # Tests et intégration IA
+│   │   └── tester_mistral.py    # [Agentic] Intégration Mistral AI
+│   ├── database/                # Configuration SQL et modèles
+│   │   ├── database_setup.py
+│   │   └── models.py
+│   ├── processor/               # Cœur fonctionnel (ETL & Audit)
+│   │   ├── ingestion_sql.py     # Tri et insertion massive
+│   │   └── init_qualite.py      # Audit Great Expectations
+│   └── scraper/                 # Scripts de récupération automatisée
+├── .env                         # Secrets et configurations locales
+├── docker-compose.yml           # Orchestration des conteneurs
+├── main.py                      # Point d'entrée du pipeline
+└── requirements.txt             # Dépendances du projet
+```
+
+## Guide d'installation (Docker)
+
+Ce projet est entièrement conteneurisé pour garantir l areproductibilité de l'audit et de l'ingestion, indépendamment de l'hôte.  
+
+### 1. Prérequis  
+- **Docker** (v24.0+) et **Docker Compose** (v2.20+).  
+- Le fichier de données `eco2mix_2025.csv` doit être présent dans le dossier `./data/` (*Note : le fichier `telecharger_donnees.py` dans le dossier `./src/scraper/` sert à télécharger ces données, l'étape 4 du guide montre comment l'utiliser.*)  
+
+### 2. Configuration de l'environnement  
+Créez un fichier `.env` à la racine du projet pour définir les paramètres de la base de données PostreSQL : 
+
+```
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=votre_mot_de_passe
+POSTGRES_DB=audit_energie
+DB_HOST=db_audit
+DB_PORT=5432
+```
+Dans une future itération du projet une clé API pour Mistral sera nécessaire pour l'exécution du code intéragissant avec l'IA, donc vous pouvez dès maintenant créer ce clé et l'ajouter à votre `.env` sous la forme : 
+
+```
+MISTRAL_API_KEY=votre_cle
+```  
+
+### 3. Déploiement de l'infrastructure
+Lancer les conteneurs en mode détaché : 
+```bash
+docker compose up -d --build
+```
+
+Cela construit l'image de l'Auditeur (via `.docker/auditeur.dockerfile`) et initialise deux services :  
+- **db_audit** : une baese de données PostgreSQL 15 avec stockage sur volume persistant.  
+- **app_auditeur** : l'environnement Python contenant la logique d'audit et les dépendances.  
+
+### 4. Obtention des données
+Lancer le fichier de téléchargement des données avec la commande suivante :  
+```bash
+docker compose exec app_auditeur python src/scraper/telecharger_donnees.py
+```  
+Cela créera le fichier `eco2mix_2025.csv` dans le dossier `./src/data/`  
+
+### 5. Lancement du pipeline  
+Pour lancer le cycle complet (Audit -> Nettoyage -> Ingestion):  
+```bash
+docker compose exec app_auditeur python main.py
+```
+
+### 6. Verification des données  
+Vous pouvez accéder au terminal PostgreSQL pour vérifier le volume des données
+```bash
+docker compose exec db_audit psql -U admin -d audit_energie -c "SELECT count(*) FROM production_energie;"
 ```

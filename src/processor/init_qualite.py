@@ -1,4 +1,11 @@
+# Copyright (C) 2026 Francisco CABRERA HERRE
+# This program is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU Affero General Public License as 
+# published by the Free Software Foundation, either version 3 of the 
+# License, or (at your option) any later version.
+
 import great_expectations as gx
+import pandas as pd
 import os
 import sys
 
@@ -20,6 +27,9 @@ def initialiser_audit_qualite():
     if not os.path.exists(chemin_csv):
         print(f"Erreur : Le fichier de données n'a pas été trouvé à l'emplacement attendu : {chemin_csv}")
         sys.exit(1)
+    
+    # On crée un dataframe pour réaliser l'insertion vers sql plus tard
+    df = pd.read_csv(chemin_csv, sep=';')
     
     # Définition de la source de données dans Great Expectations
     nom_source = "source_rte_2025"
@@ -55,15 +65,31 @@ def initialiser_audit_qualite():
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
         column="consommation", 
         min_value=0, 
-        max_value=25000  # Seuil base sur les records historiques par region
+        max_value=25000  
+        # Seuil base sur les records historiques par region
+        # Note : historiquement, la consommation maximale observée pour une région donnée est d'environ 14000-15000 MW, mais nous appliquons une marge de sécurité pour détecter les anomalies grossières (ex: 25000 MW serait clairement anormal pour une région française).
     ))
-    ## Note : Des seuils plus stricts pourraient être appliqués par région ou par type de production (ex: solaire ne devrait pas dépasser 5000 MW dans une region donnée)
-    ## Ici, nous appliquons une règle générale pour détecter les anomalies grossières, mais des règles plus fines pourraient être développées ultérieurement (en réalité la consomation la plus élevée observée est d'environ 14000-15000 MW pour la région d'Île-de-France).
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="nucleaire", 
+        min_value=0, 
+        max_value=15000
+    ))
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="eolien", 
+        min_value=0, 
+        max_value=10000
+    ))
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="solaire", 
+        min_value=0, 
+        max_value=8000
+    ))
+    # Note : les seuils pour le nucléaire, l'éolien et le solaire sont basés sur les capacités de production maximales historiques par région, avec une marge de sécurité pour détecter les anomalies.
 
     # 4. Formatage Temporel (Standard ISO 8601)
-    suite.add_expectation(gx.expectations.ExpectColumnValuesToMatchStrftimeFormat(
-        column="date_heure", 
-        strftime_format="%Y-%m-%dT%H:%M:%S"
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToMatchRegex(
+        column="date_heure",
+        regex=r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:?\d{2}$"
     ))
 
     ## ==============================================================
@@ -83,7 +109,10 @@ def initialiser_audit_qualite():
     )
     
     # Lancement de l'audit
-    resultat = validation_definition.run()
+    resultat = validation_definition.run(result_format="COMPLETE")
+    # Le flag "COMPLETE" sert à obtenir un champ avec l'index de toutes les 
+    # lignes qui ont échoué à au moins une règle, ce qui nous permettra 
+    # de les diriger vers la table de quarantaine lors de l'ingestion.
 
     if resultat.success:
         print("Statut : Donnees conformes aux exigences de l'Article 10 EU AI Act.")
@@ -91,7 +120,7 @@ def initialiser_audit_qualite():
         print("Statut : Anomalies detectees. Audit de qualite rejete.")
         print(f"Taux de succes : {resultat.statistics['success_percent']}%")
 
-    return resultat
+    return df, resultat
 
 if __name__ == "__main__":
     initialiser_audit_qualite()
