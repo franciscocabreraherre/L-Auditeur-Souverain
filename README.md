@@ -53,7 +53,7 @@ L-AUDITEUR-SOUVERAIN/
 
 ## Guide d'installation (Docker)
 
-Ce projet est entièrement conteneurisé pour garantir l areproductibilité de l'audit et de l'ingestion, indépendamment de l'hôte.  
+Ce projet est entièrement conteneurisé pour garantir la reproductibilité de l'audit et de l'ingestion, indépendamment de l'hôte.  
 
 ### 1. Prérequis  
 - **Docker** (v24.0+) et **Docker Compose** (v2.20+).  
@@ -69,7 +69,7 @@ POSTGRES_DB=audit_energie
 DB_HOST=db_audit
 DB_PORT=5432
 ```
-Dans une future itération du projet une clé API pour Mistral sera nécessaire pour l'exécution du code intéragissant avec l'IA, donc vous pouvez dès maintenant créer ce clé et l'ajouter à votre `.env` sous la forme : 
+Dans une future itération du projet une clé API pour Mistral sera nécessaire pour l'exécution du code intéragissant avec l'IA, donc vous pouvez dès maintenant créer cette clé et l'ajouter à votre `.env` sous la forme : 
 
 ```
 MISTRAL_API_KEY=votre_cle
@@ -82,7 +82,7 @@ docker compose up -d --build
 ```
 
 Cela construit l'image de l'Auditeur (via `.docker/auditeur.dockerfile`) et initialise deux services :  
-- **db_audit** : une baese de données PostgreSQL 15 avec stockage sur volume persistant.  
+- **db_audit** : une base de données PostgreSQL 15 avec stockage sur volume persistant.  
 - **app_auditeur** : l'environnement Python contenant la logique d'audit et les dépendances.  
 
 ### 4. Obtention des données
