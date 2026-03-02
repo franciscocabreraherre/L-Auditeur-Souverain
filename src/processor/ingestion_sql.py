@@ -4,11 +4,12 @@
 # published by the Free Software Foundation, either version 3 of the 
 # License, or (at your option) any later version.
 
-from src.database.database_setup import SessionLocal
-from src.database.models import production_energie, production_quarantaine, registre_audit_ia
-import pandas as pd
 import datetime
+import pandas as pd
+from sqlalchemy.dialects.postgresql import insert
 from tqdm import tqdm
+from src.database.models import production_energie, production_quarantaine, registre_audit_ia
+from src.database.database_setup import SessionLocal
 
 
 def executer_ingestion_systeme(df, resultat_audit, nom_fichier):
@@ -33,16 +34,16 @@ def executer_ingestion_systeme(df, resultat_audit, nom_fichier):
     
     nb_apres = len(df)
     if nb_avant != nb_apres:
-        print(f"/!\ Nettoyage : {nb_avant - nb_apres} lignes en doublon supprimées. /!\ ")
+        print(f"Nettoyage : {nb_avant - nb_apres} lignes en doublon supprimées.")
+
+    print(f"Finalisation : Traitement de {len(df)} lignes...")
+
+    nb_clean = 0
+    nb_quarantaine = 0
 
     try:
-        objets_clean = []
-        objets_quarantaine = []
-
-        df_reset = df.reset_index(drop=True)
-
         # On parcourt le DataFrame Pandas ligne par ligne
-        for index, row in tqdm(df_reset.iterrows(), total=len(df), desc="Tri des données", unit="ligne"):
+        for index, row in tqdm(df.iterrows(), total=len(df), desc="Insertion SQL"):
             # Préparation des données (on gère les NaT/NaN pour SQL)
             data_fields = {
                 "libelle_region": str(row['libelle_region']),
@@ -53,15 +54,21 @@ def executer_ingestion_systeme(df, resultat_audit, nom_fichier):
                 "solaire": float(row['solaire']) if pd.notnull(row['solaire']) else 0
             }
 
+            # déterminer la table cible en fonction du résultat de l'audit
             if index in indices_erreurs:
-                objets_quarantaine.append(production_quarantaine(**data_fields, erreur_log="Échec validation audit"))
+                table_cible = production_quarantaine
+                data_fields["erreur_log"] = "Échec validation audit"
+                nb_quarantaine += 1
             else:
-                objets_clean.append(production_energie(**data_fields))
+                table_cible = production_energie
+                nb_clean += 1
 
-        # Insertion massive
-        print(f"\nFinalisation : Insertion des {len(df)} lignes dans PostgreSQL...")
-        db.add_all(objets_clean)
-        db.add_all(objets_quarantaine)
+            # Insertion avec logique anti-doublons (ON CONFLICT DO NOTHING)
+            stmt = insert(table_cible).values(**data_fields) # On utilise le dialecte PostgreSQL pour bénéficier de la syntaxe ON CONFLICT
+            # Si le couple (region, date_heure) existe déjà, on ne fait rien
+            stmt = stmt.on_conflict_do_nothing(index_elements=['libelle_region', 'date_heure'])
+            
+            db.execute(stmt)
         
         # Log de l'audit
         stats = resultat_audit.statistics
@@ -70,14 +77,14 @@ def executer_ingestion_systeme(df, resultat_audit, nom_fichier):
             date_audit=datetime.datetime.now(datetime.timezone.utc),
             nom_fichier=nom_fichier,
             taux_succes=stats['success_percent'],
-            nb_lignes_ignorees=len(objets_quarantaine),
+            nb_lignes_ignorees=nb_quarantaine,
             conformite_statut=resultat_audit.success
         )
         db.add(audit_log)
 
         # Commit de la transaction
         db.commit()
-        print(f"Succès : {len(objets_clean)} lignes validées, {len(objets_quarantaine)} en quarantaine.")
+        print(f"Succès : {nb_clean} lignes validées, {nb_quarantaine} en quarantaine.")
 
     except Exception as e:
         db.rollback()

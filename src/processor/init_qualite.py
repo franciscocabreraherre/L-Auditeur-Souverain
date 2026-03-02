@@ -10,7 +10,7 @@ import os
 import sys
 
 
-def initialiser_audit_qualite():
+def initialiser_audit_qualite(chemin_csv=None):
     """
     Initialisation de la validation de la qualité des données avec Great Expectations.
     """
@@ -21,12 +21,13 @@ def initialiser_audit_qualite():
     # Créer un DataContext éphémère
     context = gx.get_context() 
     
-    # Ajouter les données à valider au contexte
-    chemin_csv = os.path.join("/app", "data", "eco2mix_2025.csv")  # Chemin vers le fichier CSV téléchargé précédemment, mais pointé vers le chemin dans le conteneur Docker
+    # Si aucun chemin n'est fourni, on cherche le fichier delta par defaut
+    if chemin_csv is None:
+        chemin_csv = os.path.join("/app", "data", "delta_update.csv")
 
     if not os.path.exists(chemin_csv):
-        print(f"Erreur : Le fichier de données n'a pas été trouvé à l'emplacement attendu : {chemin_csv}")
-        sys.exit(1)
+        print(f"Erreur : Fichier introuvable : {chemin_csv}")
+        return None, None
     
     # On crée un dataframe pour réaliser l'insertion vers sql plus tard
     df = pd.read_csv(chemin_csv, sep=';')

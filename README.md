@@ -8,8 +8,17 @@ Ce projet implémente un pipeline de gouvernance de données end-to-end pour le 
 * **Nom** : éCO2mix Régional (*Temps Réel*)
 * **Producteur** : RTE (*Réseau de Transport d'Électricité*)
 * **Portail** : ODRE (*Open Data Réseaux Énergies*)
-* **Période cible** : Janvier 2025 - Décembre 2025
+* **Période cible** : A partir du 01/01/2025
 * **Note** : Les données ne sont pas versionnées dans ce dépôt. Le script situé dans le répertoire `src/scraper` permet une ingestion automatisée et vérifiée.
+
+## Strategie de mise a jour des donnees
+
+Le pipeline utilise desormais une approche incrementale pour l'acquisition des donnees via l'API ODRE (Réseaux Énergies). 
+
+1. **Initialisation** : Lors de la premiere execution, le systeme telecharge l'integralite des donnees pour l'annee 2025.
+2. **Incrementation** : Les executions suivantes interrogent la base de donnees pour identifier le dernier horodatage (`MAX date_heure`). 
+3. **Filtrage API** : Seules les donnees posterieures a cet horodatage sont requetees aupres de l'API RTE, minimisant la consommation de bande passante et les ressources de calcul.
+4. **Securité** : Une verification de doublons (`drop_duplicates`) est effectuee en memoire avant l'insertion pour garantir l'integrite referentielle en cas de reponse API chevauchante.
 
 ### Objectifs de l'Audit (IA Souveraine)
 L'agent d'IA (Mistral) analyse le pipeline pour répondre aux exigences de l'Article 10 de l'EU AI Act (Gouvernance des données) :
@@ -30,7 +39,7 @@ L'agent d'IA (Mistral) analyse le pipeline pour répondre aux exigences de l'Art
 ```text
 L-AUDITEUR-SOUVERAIN/
 ├── data/                        # Sources de données et documentation RTE
-│   └── eco2mix_2025.csv         # Dataset principal (400k+ lignes)
+│   └── delta_update.csv         # Dataset principal (400k+ lignes)
 ├── docker/                      # Fichiers de build Docker
 │   └── auditeur.dockerfile
 ├── notebooks/                   # Études et exploration de données
@@ -57,7 +66,7 @@ Ce projet est entièrement conteneurisé pour garantir la reproductibilité de l
 
 ### 1. Prérequis  
 - **Docker** (v24.0+) et **Docker Compose** (v2.20+).  
-- Le fichier de données `eco2mix_2025.csv` doit être présent dans le dossier `./data/` (*Note : le fichier `telecharger_donnees.py` dans le dossier `./src/scraper/` sert à télécharger ces données, l'étape 4 du guide montre comment l'utiliser.*)  
+- Un compte sur le portail ODRE pour obtenir une `ODRE_API_KEY` (optionnel mais recommande).
 
 ### 2. Configuration de l'environnement  
 Créez un fichier `.env` à la racine du projet pour définir les paramètres de la base de données PostreSQL : 
@@ -68,6 +77,7 @@ POSTGRES_PASSWORD=votre_mot_de_passe
 POSTGRES_DB=audit_energie
 DB_HOST=db_audit
 DB_PORT=5432
+ODRE_API_KEY=votre_cle
 ```
 Dans une future itération du projet une clé API pour Mistral sera nécessaire pour l'exécution du code intéragissant avec l'IA, donc vous pouvez dès maintenant créer cette clé et l'ajouter à votre `.env` sous la forme : 
 
@@ -85,20 +95,13 @@ Cela construit l'image de l'Auditeur (via `.docker/auditeur.dockerfile`) et init
 - **db_audit** : une base de données PostgreSQL 15 avec stockage sur volume persistant.  
 - **app_auditeur** : l'environnement Python contenant la logique d'audit et les dépendances.  
 
-### 4. Obtention des données
-Lancer le fichier de téléchargement des données avec la commande suivante :  
-```bash
-docker compose exec app_auditeur python src/scraper/telecharger_donnees.py
-```  
-Cela créera le fichier `eco2mix_2025.csv` dans le dossier `./src/data/`  
-
-### 5. Lancement du pipeline  
-Pour lancer le cycle complet (Audit -> Nettoyage -> Ingestion):  
+### 4. Ingestion et Mise a jour des donnees
+Le projet ne contient pas de donnees pre-installees. Pour initialiser ou mettre a jour la base de donnees, executez le pipeline principal :
 ```bash
 docker compose exec app_auditeur python main.py
 ```
 
-### 6. Verification des données  
+### 5. Verification des données  
 Vous pouvez accéder au terminal PostgreSQL pour vérifier le volume des données
 ```bash
 docker compose exec db_audit psql -U admin -d audit_energie -c "SELECT count(*) FROM production_energie;"

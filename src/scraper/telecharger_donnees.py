@@ -25,26 +25,20 @@ def obtenir_derniere_date_base():
         db.close()
 
 
-def recuperer_donnees_incrementales():
+def executer_telechargement_incremental():
     """
     Télécharge uniquement les nouvelles données régionales éCO2mix depuis la dernière date présente dans la base de données.
     """
-    derniere
-
-
-def recuperer_donnees_2025():
-    """
-    Téléchargement des données régionales éCO2mix de l'année 2025 en utilisant l'API du site web de l'ODRE.
-    """
+    
     derniere_date = obtenir_derniere_date_base()
     
     # Si la base est vide on télécharge toutes les données à partir du 01/01/2025
     if derniere_date is None:
         start_filter = "2025-01-01T00:00:00Z"
-        print("Aucune date trouvée dans la base de données. Téléchargement de toutes les données à partir de 2025.")
+        print("Initialisation : aucune donnée en base. Récupération depuis le 01/01/2025.")
     else:
         start_filter = (derniere_date).isoformat()
-        print(f"Dernière date dans la base de données : {derniere_date}. Téléchargement des données à partir de cette date.")
+        print(f"Mise à jour : récupération des données postérieures au {start_filter}.")
 
     URL_API = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-regional-tr/exports/csv"
 
@@ -59,35 +53,41 @@ def recuperer_donnees_2025():
     api_key = os.getenv("ODRE_API_KEY")
     headers = {"Authorization": f"Apikey {api_key}"} if api_key else {}
 
+    # Début du téléchargement avec barre de progression
     print("Téléchargement des données RTE 2025 en cours (cela peut prendre un moment)...")
     
     try:
         reponse = requests.get(URL_API, params=parametres, headers=headers, stream=True)
         reponse.raise_for_status() # Vérifie si le téléchargement a échoué (404, 500, etc.)
 
-        # Si l'API ne renvoie rien (pas de nouvelles données)
-        if int(reponse.headers.get('Content-Length', 0)) < 100: # Seuil arbitraire pour un CSV vide
-             print("Aucune nouvelle donnée disponible sur le serveur.")
-             return False
-
-        taille_totale = int(reponse.headers.get('content-length', 0))
-
         os.makedirs('data', exist_ok=True)
         chemin_fichier = "data/delta_update.csv"
         
-        with open(chemin_fichier, "wb") as f, \
-        tqdm(
-            desc="Téléchargement",
-            total=taille_totale,
-            unit='iB',
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as barre:
-            for morceau in reponse.iter_content(chunk_size=1024):
-                taille = f.write(morceau)
-                barre.update(taille)
+        with open(chemin_fichier, "wb") as f:
+            # On récupère le premier morceau pour vérifier s'il y a du contenu
+            iterateur = reponse.iter_content(chunk_size=1024)
+            try:
+                premier_morceau = next(iterateur)
+            except StopIteration:
+                print("Information : le serveur a renvoyé un fichier vide.")
+                return None
+            
+            f.write(premier_morceau)
+
+            with tqdm(desc="Téléchargement", unit='iB', unit_scale=True, unit_divisor=1024) as barre:
+                barre.update(len(premier_morceau))
+                for morceau in iterateur:
+                    f.write(morceau)
+                    barre.update(len(morceau))
         
-        print(f"Nouvelles données sauvegardées dans : {chemin_fichier}")
+        # vérification post-téléchargement de la taille du fichier
+        taille_reelle = os.path.getsize(chemin_fichier)
+
+        if taille_reelle < 2500: # Taille estimée pour un CSV de plus de 12 lignes (environ 2kb d'après les tests)
+            print("Information : Le fichier téléchargé est vide ou ne contient que les en-têtes.")
+            return None
+        
+        print(f"Succès : données sauvegardées dans {chemin_fichier}")
         return True
 
     except Exception as e:
@@ -95,4 +95,4 @@ def recuperer_donnees_2025():
         return False
 
 if __name__ == "__main__":
-    recuperer_donnees_incrementales()
+    executer_telechargement_incremental()
