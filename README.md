@@ -1,6 +1,25 @@
 # Projet : L'Auditeur Souverain
 
-Ce projet implémente un pipeline de gouvernance de données end-to-end pour le secteur énergétique français. Il utilise l'IA souveraine **Mistral** et la bibliothèque **Great Expectations** pour garantir la conformité des données de production électrique aux exigences de l'**EU AI Act**.
+Ce projet implémente un pipeline de gouvernance de données end-to-end pour le secteur énergétique français. Il utilise l'IA souveraine **Mistral** et la bibliothèque **Great Expectations** pour garantir la conformité des données de production électrique aux exigences de l'**EU AI Act** (Article 10).
+
+## État du Projet (03 Mars 2026)
+* **Pipeline Haute Performance** : Ingestion batch de ~500k lignes en moins de 3 minutes (optimisation des entrées/sorties SQL).
+* **Audit Agentique Mistral** : Analyse automatisée des rapports de qualité et stockage des verdicts de conformité au format JSON.
+* **Gouvernance de Données** : Séparation stricte entre données validées (`production_energie`) et données en anomalie (`production_quarantaine`).
+
+## Architecture Technique
+* **Ingestion** : Python / Pandas / SQLAlchemy.
+* **Qualité** : Great Expectations (Contrats de données Article 10).
+* **IA** : Agent Mistral (Analyse souveraine).
+* **Base de données** : PostgreSQL 15 (Dockerisé).
+
+## Guide d'Utilisation Rapide
+1. **Lancer l'infrastructure** : `docker compose up -d --build`
+2. **Exécuter le pipeline complet** : `docker compose exec app_auditeur python main.py`
+3. **Consulter les rapports d'audit** : 
+   ```bash
+   docker compose exec db_audit psql -U admin -d audit_energie -c "SELECT * FROM registre_audit_ia ORDER BY date_audit DESC LIMIT 1;"
+   ```
 
 ## Fiche Technique : Données et Objectifs
 

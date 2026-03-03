@@ -125,3 +125,18 @@ def initialiser_audit_qualite(chemin_csv=None):
 
 if __name__ == "__main__":
     initialiser_audit_qualite()
+
+
+def extraire_resume_audit(resultat):
+    """
+    Simplifie le résultat de Great Expectations pour l'agent IA.
+    """
+    return {
+        "taux_succes": resultat.statistics['success_percent'],
+        "nb_lignes": resultat.statistics['evaluated_expectations'],
+        "colonnes_en_erreur": [
+            res.expectation_config.kwargs.get('column') 
+            for res in resultat.results if not res.success
+        ],
+        "conforme": resultat.success
+    }
