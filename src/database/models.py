@@ -21,7 +21,7 @@ class production_energie(Base):
 
     # définition des colonnes de la table
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    libelle_region: Mapped[str] = mapped_column(String(100), nullable=False)
+    libelle_region: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     date_heure: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=False), nullable=False) #timezone=False car les données d'eco2mix sont en heure locale
     consommation: Mapped[float] = mapped_column(Numeric(10,2), nullable=False)
     nucleaire: Mapped[float] = mapped_column(Numeric(10,2), nullable=False)

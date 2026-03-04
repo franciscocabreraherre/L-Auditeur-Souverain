@@ -1,25 +1,37 @@
-# Projet : L'Auditeur Souverain
+# L'Auditeur Souverain : Pipeline de Gouvernance Energetique
 
-Ce projet implémente un pipeline de gouvernance de données end-to-end pour le secteur énergétique français. Il utilise l'IA souveraine **Mistral** et la bibliothèque **Great Expectations** pour garantir la conformité des données de production électrique aux exigences de l'**EU AI Act** (Article 10).
+Ce projet implemente un pipeline de donnees end-to-end conforme a l'Article 10 de l'EU AI Act. Il assure l'ingestion massive, l'audit de qualite via Mistral AI et la visualisation souveraine des donnees de production electrique francaise.
 
-## État du Projet (03 Mars 2026)
-* **Pipeline Haute Performance** : Ingestion batch de ~500k lignes en moins de 3 minutes (optimisation des entrées/sorties SQL).
-* **Audit Agentique Mistral** : Analyse automatisée des rapports de qualité et stockage des verdicts de conformité au format JSON.
-* **Gouvernance de Données** : Séparation stricte entre données validées (`production_energie`) et données en anomalie (`production_quarantaine`).
+## Etat du Projet (Mars 2026)
+* Dashboard Interactif : Interface Streamlit permettant une analyse multi-mode (National, Regional, Comparaison) avec cartographie choroplethe integree.
+* Audit Agentique Mistral : Analyse automatisee des rapports de qualite et stockage des verdicts de conformite au format JSON dans la table registre_audit_ia.
+* Pipeline Haute Performance : Ingestion batch de ~500k lignes optimisee via SQLAlchemy.
+* Gouvernance de Donnees : Separation stricte entre donnees validees (production_energie) et donnees en anomalie (production_quarantaine).
 
 ## Architecture Technique
-* **Ingestion** : Python / Pandas / SQLAlchemy.
-* **Qualité** : Great Expectations (Contrats de données Article 10).
-* **IA** : Agent Mistral (Analyse souveraine).
-* **Base de données** : PostgreSQL 15 (Dockerisé).
+* Interface : Streamlit et Plotly Express (Visualisation et Cartographie).
+* Ingestion : Python / Pandas / SQLAlchemy.
+* Qualite : Great Expectations (Contrats de donnees Article 10).
+* IA : Agent Mistral (Analyse souveraine via API securisee).
+* Base de donnees : PostgreSQL 15 (Dockerise) avec contraintes d'unicite et indexation.
+
+
 
 ## Guide d'Utilisation Rapide
-1. **Lancer l'infrastructure** : `docker compose up -d --build`
-2. **Exécuter le pipeline complet** : `docker compose exec app_auditeur python main.py`
-3. **Consulter les rapports d'audit** : 
-   ```bash
-   docker compose exec db_audit psql -U admin -d audit_energie -c "SELECT * FROM registre_audit_ia ORDER BY date_audit DESC LIMIT 1;"
-   ```
+
+### 1. Deploiement de l'infrastructure
+Assurez-vous d'avoir un fichier .env configure, puis lancez les conteneurs :
+```bash
+docker compose up -d --build
+```
+### 2. Execution du Pipeline  
+Pour lancer l'ingestion, les tests de qualite et l'audit Mistral :
+```bash
+docker compose exec app_auditeur python main.py
+```
+### 3. Consultation du Dashboard
+L'interface de visualisation est accessible a l'adresse suivante :
+http://localhost:8501
 
 ## Fiche Technique : Données et Objectifs
 
@@ -29,6 +41,15 @@ Ce projet implémente un pipeline de gouvernance de données end-to-end pour le 
 * **Portail** : ODRE (*Open Data Réseaux Énergies*)
 * **Période cible** : A partir du 01/01/2025
 * **Note** : Les données ne sont pas versionnées dans ce dépôt. Le script situé dans le répertoire `src/scraper` permet une ingestion automatisée et vérifiée.
+
+### Objectif: Gouvernance et EU AI Act (Art. 10)
+
+L'agent d'IA (Mistral) analyse le pipeline pour repondre aux exigences reglementaires :
+
+1. **Représentativité** : Validation que les filieres energetiques (Solaire, Eolien, Nucleaire) sont documentees sans omissions regionales.  
+2. **Précision technique** : Identification des anomalies de mesure (pics de consommation) pour minimiser les risques de regulation.
+
+3. **Souverainete des flux** : Garantie que les donnees critiques restent confinees dans l'environnement local PostgreSQL/Docker.
 
 ## Strategie de mise a jour des donnees
 
@@ -57,26 +78,14 @@ L'agent d'IA (Mistral) analyse le pipeline pour répondre aux exigences de l'Art
 
 ```text
 L-AUDITEUR-SOUVERAIN/
-├── data/                        # Sources de données et documentation RTE
-│   └── delta_update.csv         # Dataset principal (400k+ lignes)
-├── docker/                      # Fichiers de build Docker
-│   └── auditeur.dockerfile
-├── notebooks/                   # Études et exploration de données
-│   └── data_exploration.ipynb
 ├── src/
-│   ├── auditor/                 # Tests et intégration IA
-│   │   └── tester_mistral.py    # [Agentic] Intégration Mistral AI
-│   ├── database/                # Configuration SQL et modèles
-│   │   ├── database_setup.py
-│   │   └── models.py
-│   ├── processor/               # Cœur fonctionnel (ETL & Audit)
-│   │   ├── ingestion_sql.py     # Tri et insertion massive
-│   │   └── init_qualite.py      # Audit Great Expectations
-│   └── scraper/                 # Scripts de récupération automatisée
-├── .env                         # Secrets et configurations locales
-├── docker-compose.yml           # Orchestration des conteneurs
-├── main.py                      # Point d'entrée du pipeline
-└── requirements.txt             # Dépendances du projet
+│   ├── database/        # modeles SQLAlchemy (production, quarantaine, audit)
+│   ├── auditor/         # integration Mistral AI
+│   └── processor/       # ETL et Great Expectations
+├── app.py               # Dashboard Streamlit (Visualisation et Map)
+├── main.py              # Point d'entree du pipeline
+├── docker-compose.yml   # Orchestration des services (db_audit, app_auditeur)
+└── requirements.txt     # Dependances (streamlit, plotly, sqlalchemy, etc.)
 ```
 
 ## Guide d'installation (Docker)
@@ -125,3 +134,8 @@ Vous pouvez accéder au terminal PostgreSQL pour vérifier le volume des donnée
 ```bash
 docker compose exec db_audit psql -U admin -d audit_energie -c "SELECT count(*) FROM production_energie;"
 ```
+
+## Licence
+
+Copyright (C) 2026 Francisco CABRERA HERRE.
+Ce programme est un logiciel libre : vous pouvez le redistribuer et/ou le modifier selon les termes de la Licence Publique Generale Affero GNU (AGPL) telle que publiee par la Free Software Foundation, version 3 ou ulterieure.

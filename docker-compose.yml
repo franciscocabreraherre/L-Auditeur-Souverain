@@ -23,5 +23,18 @@ services:
       - db_audit
     tty: true # Permet l'interaction avec le terminal
 
+  # Dashboard Streamlit
+  dashboard:
+    build:
+      context: .
+      dockerfile: ./docker/auditeur.dockerfile
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    env_file: .env
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - db_audit
 volumes:
   postgres_data:

@@ -6,3 +6,6 @@ sqlalchemy
 psycopg2-binary
 requests
 tqdm
+streamlit
+plotly==5.20.0
+requests==2.31.0
